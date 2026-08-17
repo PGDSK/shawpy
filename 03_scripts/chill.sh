@@ -7,4 +7,4 @@ kscreen-doctor \
     output.2.brightness.40 \
     output.3.brightness.40
 
-qdbus org.kde.kglobalaccel /component/kwin invokeShortcut "Toggle Night Color"
+
