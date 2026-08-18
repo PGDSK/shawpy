@@ -1,6 +1,9 @@
 import socket
+import os
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+hostname = socket.gethostname() 
 
 server.bind(("0.0.0.0", 8000))
 server.listen()
@@ -11,13 +14,24 @@ while True:
     client, address = server.accept()
 
     print(f"Connection from {address}")
+###Eveything above this line is the inital setup 
 
-    client.send(b"Hello nigga!\n")
+    while True:
+        data = client.recv(1024)
 
-    data = client.recv(1024)
+        message = data.decode().strip()
 
-    print(f"Recieved: {data.decode()}")
+        print(f"Received: {message} from {address}")
 
-    client.send(b"got your message\nprocessing...")
+        if message == "quit":
+            client.send(b"goodbye!")
+            break
 
-    client.close()
+        if message == "STATUS":
+            response = f"Server is running!\nfrom host: {hostname}"
+        else:
+            response = "Unknown command\n"
+
+        client.send(response.encode())
+
+client.close()
