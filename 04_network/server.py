@@ -1,9 +1,10 @@
 import socket
 import os
+import subprocess
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-hostname = socket.gethostname() 
+hostname = socket.gethostname()
 
 server.bind(("0.0.0.0", 8000))
 server.listen()
@@ -14,10 +15,12 @@ while True:
     client, address = server.accept()
 
     print(f"Connection from {address}")
-###Eveything above this line is the inital setup 
 
     while True:
         data = client.recv(1024)
+
+        if not data:
+            break
 
         message = data.decode().strip()
 
@@ -28,10 +31,18 @@ while True:
             break
 
         if message == "STATUS":
-            response = f"Server is running!\nfrom host: {hostname}"
+            memory = subprocess.check_output(
+                ["free", "-h"]
+            ).decode()
+
+            response = (
+                f"=== SHAWPY // NOBARA ===\n"
+                f"Host: {hostname}\n"
+                f"RAM:\n{memory}"
+            )
         else:
             response = "Unknown command\n"
 
         client.send(response.encode())
 
-client.close()
+    client.close()
