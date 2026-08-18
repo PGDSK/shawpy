@@ -31,15 +31,23 @@ while True:
             break
 
         if message == "STATUS":
-            memory = subprocess.check_output(
-                ["free", "-h"]
-            ).decode()
+    memory = subprocess.check_output(["free", "-b"]).decode()
+    
+    memory_line = memory.splitlines()[1]
+    parts = memory_line.split()
 
-            response = (
-                f"=== SHAWPY // NOBARA ===\n"
-                f"Host: {hostname}\n"
-                f"RAM:\n{memory}"
-            )
+    total = int(parts[1])
+    used = int(parts[2])
+
+    used_gb = used / (1024 ** 3)
+    total_gb = total / (1024 ** 3)
+    percentage = (used / total) * 100
+
+    response = (
+        f"=== SHAWPY // NOBARA ===\n"
+        f"Host: {hostname}\n"
+        f"RAM: {used_gb:.1f} / {total_gb:.1f} GiB ({percentage:.0f}%)\n"
+    )
         else:
             response = "Unknown command\n"
 
