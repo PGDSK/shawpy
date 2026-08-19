@@ -27,11 +27,10 @@ while True:
 
         if message == "quit":
             client.send(b"goodbye!")
-            print(f"client {address} disconecting...")
+            print(f"client {address} disconnecting...")
             break
 
         if message == "STATUS":
-<<<<<<< HEAD
 
             # RAM
             memory = subprocess.check_output(
@@ -41,15 +40,6 @@ while True:
             memory_line = memory.splitlines()[1]
             parts = memory_line.split()
 
-=======
-            memory = subprocess.check_output(
-                ["free", "-b"]
-            ).decode()
-
-            memory_line = memory.splitlines()[1]
-            parts = memory_line.split()
-
->>>>>>> f1c066edd281c098676a5b9f46c7796b6e1c4c4e
             total = int(parts[1])
             used = int(parts[2])
 
@@ -57,7 +47,6 @@ while True:
             total_gb = total / (1024 ** 3)
             percentage = (used / total) * 100
 
-<<<<<<< HEAD
             # GPU
             gpu = subprocess.check_output(
                 [
@@ -88,7 +77,7 @@ while True:
                 f"║  HOST       {hostname:<25}║\n"
                 f"║                                      ║\n"
                 f"║  CPU        Ryzen 5 7600             ║\n"
-                f"║  RAM        {used_gb:.1f} / {used_gb + (total - used) / (1024 ** 3):.1f} GiB"
+                f"║  RAM        {used_gb:.1f} / {total_gb:.1f} GiB"
                 f" ({percentage:.0f}%)       ║\n"
                 f"║  GPU        {gpu_name:<25}║\n"
                 f"║  GPU LOAD   {gpu_usage:>3}%   TEMP {gpu_temp:>3}°C            ║\n"
@@ -99,12 +88,6 @@ while True:
                 f"║  ◉ SSH         ONLINE                 ║\n"
                 f"║  ◉ SERVER      ONLINE                 ║\n"
                 f"╚══════════════════════════════════════╝\n"
-=======
-            response = (
-                f"=== SHAWPY // NOBARA ===\n"
-                f"Host: {hostname}\n"
-                f"RAM: {used_gb:.1f} / {total_gb:.1f} GiB ({percentage:.0f}%)\n"
->>>>>>> f1c066edd281c098676a5b9f46c7796b6e1c4c4e
             )
 
         else:
@@ -112,9 +95,4 @@ while True:
 
         client.send(response.encode())
 
-<<<<<<< HEAD
     client.close()
-
-=======
-    client.close()
->>>>>>> f1c066edd281c098676a5b9f46c7796b6e1c4c4e
