@@ -1,13 +1,41 @@
 import socket
+import os
+import time
 
-hostname = socket.gethostname()
+SERVER = "100.124.10.41"
+PORT = 8000
 
-print("=== SHAWPY NETWORK MONITOR ===")
-print (f"Hostname: {hostname}")
+while True:
+    try:
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect((SERVER, PORT))
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.connect(("8.8.8.8", 80))
-local_ip = sock.getsockname()[0]
-sock.close()
+        client.send(b"STATUS\n")
 
-print(f"Local IP: {local_ip}")
+        data = client.recv(4096).decode()
+
+        client.close()
+
+        os.system("clear")
+
+        print(data)
+
+        print("Refreshing every 2 seconds...")
+
+        time.sleep(2)
+
+    except Exception as e:
+        os.system("clear")
+
+        print("╔══════════════════════════════════════╗")
+        print("║          SHAWPY // NOBARA            ║")
+        print("╠══════════════════════════════════════╣")
+        print("║                                      ║")
+        print("║  ◉ NETWORK     OFFLINE               ║")
+        print("║  ◉ SERVER      UNREACHABLE           ║")
+        print("║                                      ║")
+        print(f"║  Error: {str(e)[:25]:<25} ║")
+        print("║                                      ║")
+        print("╚══════════════════════════════════════╝")
+
+        time.sleep(2)
