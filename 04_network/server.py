@@ -1,96 +1,220 @@
+#!/usr/bin/env python3
+"""
+SHAWPY Status Server
+Cross-platform TCP server that answers STATUS requests with a live dashboard.
+
+Usage:
+  python server.py
+  python server.py --host 0.0.0.0 --port 8000
+  python server.py --json          # machine-readable responses
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import signal
 import socket
-import subprocess
+import sys
+import threading
+from datetime import datetime
+from pathlib import Path
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# Allow running from project root
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-hostname = socket.gethostname()
+from core.config import load_config
+from core.dashboard import render
+from core.stats import collect
 
-server.bind(("0.0.0.0", 8000))
-server.listen()
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)-7s  %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger("shawpy.server")
 
-print("Server listening on port 8000")
 
-while True:
-    client, address = server.accept()
+class StatusServer:
+    def __init__(
+        self,
+        host: str = "0.0.0.0",
+        port: int = 8000,
+        max_clients: int = 8,
+        json_mode: bool = False,
+        title: str = "SHAWPY // STATUS",
+        width: int = 42,
+    ):
+        self.host = host
+        self.port = port
+        self.max_clients = max_clients
+        self.json_mode = json_mode
+        self.title = title
+        self.width = width
+        self._sock: socket.socket | None = None
+        self._stop = threading.Event()
+        self._clients = 0
+        self._lock = threading.Lock()
 
-    print(f"Connection from {address}")
+    def _handle_client(self, client: socket.socket, address: tuple) -> None:
+        peer = f"{address[0]}:{address[1]}"
+        with self._lock:
+            self._clients += 1
+        log.info("Connected  %s  (active=%d)", peer, self._clients)
 
-    while True:
-        data = client.recv(1024)
+        try:
+            client.settimeout(60.0)
+            while not self._stop.is_set():
+                try:
+                    data = client.recv(1024)
+                except socket.timeout:
+                    continue
+                if not data:
+                    break
 
-        if not data:
-            break
+                message = data.decode(errors="replace").strip().upper()
+                log.debug("  %s → %s", peer, message)
 
-        message = data.decode().strip()
+                if message in ("QUIT", "EXIT", "BYE"):
+                    client.sendall(b"goodbye\n")
+                    break
 
-        print(f"Received: {message}")
+                if message == "STATUS":
+                    stats = collect()
+                    if self.json_mode:
+                        payload = {
+                            "hostname": stats.hostname,
+                            "os": stats.os_name,
+                            "cpu": {
+                                "name": stats.cpu_name,
+                                "percent": stats.cpu_percent,
+                                "cores": stats.cpu_cores,
+                            },
+                            "ram": {
+                                "used_gb": round(stats.ram_used_gb, 2),
+                                "total_gb": round(stats.ram_total_gb, 2),
+                                "percent": round(stats.ram_percent, 1),
+                            },
+                            "disk": {
+                                "used_gb": round(stats.disk_used_gb, 1),
+                                "total_gb": round(stats.disk_total_gb, 1),
+                                "percent": round(stats.disk_percent, 1),
+                            },
+                            "gpu": {
+                                "available": stats.gpu.available,
+                                "name": stats.gpu.name,
+                                "temp_c": stats.gpu.temp_c,
+                                "util_pct": stats.gpu.util_pct,
+                                "vram_used_mib": stats.gpu.vram_used_mib,
+                                "vram_total_mib": stats.gpu.vram_total_mib,
+                            },
+                            "uptime": stats.uptime,
+                            "collected_at": stats.collected_at.isoformat(),
+                        }
+                        response = json.dumps(payload, indent=2) + "\n"
+                    else:
+                        response = render(stats, title=self.title, width=self.width)
+                elif message == "PING":
+                    response = "PONG\n"
+                else:
+                    response = "Unknown command. Try: STATUS | PING | QUIT\n"
 
-        if message == "quit":
-            client.send(b"goodbye!")
-            print(f"client {address} disconnecting...")
-            break
+                client.sendall(response.encode("utf-8", errors="replace"))
 
-        if message == "STATUS":
+        except (ConnectionResetError, BrokenPipeError, OSError) as exc:
+            log.debug("Client %s error: %s", peer, exc)
+        finally:
+            try:
+                client.close()
+            except OSError:
+                pass
+            with self._lock:
+                self._clients -= 1
+            log.info("Disconnected  %s  (active=%d)", peer, self._clients)
 
-            # RAM
-            memory = subprocess.check_output(
-                ["free", "-b"]
-            ).decode()
+    def start(self) -> None:
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-            memory_line = memory.splitlines()[1]
-            parts = memory_line.split()
+        try:
+            self._sock.bind((self.host, self.port))
+        except OSError as exc:
+            log.error("Cannot bind %s:%d → %s", self.host, self.port, exc)
+            sys.exit(1)
 
-            total = int(parts[1])
-            used = int(parts[2])
+        self._sock.listen(self.max_clients)
+        self._sock.settimeout(1.0)  # so we can check _stop periodically
 
-            used_gb = used / (1024 ** 3)
-            total_gb = total / (1024 ** 3)
-            percentage = (used / total) * 100
+        log.info("Listening on %s:%d", self.host, self.port)
+        log.info("Mode: %s", "JSON" if self.json_mode else "ASCII dashboard")
+        log.info("Press Ctrl+C to stop")
 
-            # GPU
-            gpu = subprocess.check_output(
-                [
-                    "nvidia-smi",
-                    "--query-gpu=name,temperature.gpu,utilization.gpu,memory.used,memory.total",
-                    "--format=csv,noheader,nounits"
-                ]
-            ).decode().strip()
+        while not self._stop.is_set():
+            try:
+                client, address = self._sock.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                if self._stop.is_set():
+                    break
+                raise
 
-            gpu_parts = [x.strip() for x in gpu.split(",")]
-
-            gpu_name = gpu_parts[0]
-            gpu_temp = gpu_parts[1]
-            gpu_usage = gpu_parts[2]
-            vram_used = gpu_parts[3]
-            vram_total = gpu_parts[4]
-
-            # Uptime
-            uptime = subprocess.check_output(
-                ["uptime", "-p"]
-            ).decode().strip()
-
-            response = (
-                f"\n"
-          
-                f"   HOST       {hostname:<25}\n"
-                f"                                     \n"
-                f" CPU        Ryzen 5 7600             \n"
-                f" RAM        {used_gb:.1f} / {total_gb:.1f} GiB"
-                f" ({percentage:.0f}%)       \n"
-                f" GPU        {gpu_name:<25}\n"
-                f" GPU LOAD   {gpu_usage:>3}%   TEMP {gpu_temp:>3}°C            \n"
-                f" VRAM       {vram_used} / {vram_total} MiB              \n"
-                f" UPTIME     {uptime:<25}\n"
-                f"                                     \n"
-                f" ◉ NETWORK     TAILSCALE / TCP       \n"
-                f" ◉ SSH         ONLINE                 \n"
-                f" ◉ SERVER      ONLINE                 \n"
-           
+            t = threading.Thread(
+                target=self._handle_client,
+                args=(client, address),
+                daemon=True,
+                name=f"client-{address[0]}",
             )
+            t.start()
 
-        else:
-            response = "Unknown command\n"
+    def stop(self) -> None:
+        log.info("Shutting down...")
+        self._stop.set()
+        if self._sock:
+            try:
+                self._sock.close()
+            except OSError:
+                pass
 
-        client.send(response.encode())
 
-    client.close()
+def main() -> None:
+    cfg = load_config()
+
+    parser = argparse.ArgumentParser(
+        description="SHAWPY Status Server",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument("--host", default=cfg["server"]["host"], help="Bind address")
+    parser.add_argument("--port", type=int, default=cfg["server"]["port"], help="Bind port")
+    parser.add_argument("--json", action="store_true", help="Respond with JSON instead of ASCII")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Debug logging")
+    args = parser.parse_args()
+
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    server = StatusServer(
+        host=args.host,
+        port=args.port,
+        max_clients=cfg["server"].get("max_clients", 8),
+        json_mode=args.json,
+        title=cfg["display"].get("title", "SHAWPY // STATUS"),
+        width=cfg["display"].get("width", 42),
+    )
+
+    def _signal_handler(sig, frame):
+        server.stop()
+
+    signal.signal(signal.SIGINT, _signal_handler)
+    if hasattr(signal, "SIGTERM"):
+        signal.signal(signal.SIGTERM, _signal_handler)
+
+    try:
+        server.start()
+    except KeyboardInterrupt:
+        server.stop()
+
+
+if __name__ == "__main__":
+    main()
