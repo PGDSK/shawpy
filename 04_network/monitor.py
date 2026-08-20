@@ -20,22 +20,15 @@ while True:
 
         print(data)
 
-        print("Refreshing every 2 seconds...")
+        print("Refreshing/2s")
 
         time.sleep(2)
 
     except Exception as e:
         os.system("clear")
 
-        print("╔══════════════════════════════════════╗")
-        print("║          SHAWPY // NOBARA            ║")
-        print("╠══════════════════════════════════════╣")
-        print("║                                      ║")
-        print("║  ◉ NETWORK     OFFLINE               ║")
-        print("║  ◉ SERVER      UNREACHABLE           ║")
-        print("║                                      ║")
-        print(f"║  Error: {str(e)[:25]:<25} ║")
-        print("║                                      ║")
-        print("╚══════════════════════════════════════╝")
+        print(" ◉ NETWORK     OFFLINE      ")
+        print(" ◉ SERVER      UNREACHABLE       ")
+        print(f" Error: {str(e)[:25]:<25}")
 
         time.sleep(2)

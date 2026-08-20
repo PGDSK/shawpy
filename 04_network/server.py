@@ -71,23 +71,21 @@ while True:
 
             response = (
                 f"\n"
-                f"╔══════════════════════════════════════╗\n"
-                f"║          SHAWPY // NOBARA            ║\n"
-                f"╠══════════════════════════════════════╣\n"
-                f"║  HOST       {hostname:<25}║\n"
-                f"║                                      ║\n"
-                f"║  CPU        Ryzen 5 7600             ║\n"
-                f"║  RAM        {used_gb:.1f} / {total_gb:.1f} GiB"
-                f" ({percentage:.0f}%)       ║\n"
-                f"║  GPU        {gpu_name:<25}║\n"
-                f"║  GPU LOAD   {gpu_usage:>3}%   TEMP {gpu_temp:>3}°C            ║\n"
-                f"║  VRAM       {vram_used} / {vram_total} MiB              ║\n"
-                f"║  UPTIME     {uptime:<25}║\n"
-                f"║                                      ║\n"
-                f"║  ◉ NETWORK     TAILSCALE / TCP       ║\n"
-                f"║  ◉ SSH         ONLINE                 ║\n"
-                f"║  ◉ SERVER      ONLINE                 ║\n"
-                f"╚══════════════════════════════════════╝\n"
+          
+                f"   HOST       {hostname:<25}\n"
+                f"                                     \n"
+                f" CPU        Ryzen 5 7600             \n"
+                f" RAM        {used_gb:.1f} / {total_gb:.1f} GiB"
+                f" ({percentage:.0f}%)       \n"
+                f" GPU        {gpu_name:<25}\n"
+                f" GPU LOAD   {gpu_usage:>3}%   TEMP {gpu_temp:>3}°C            \n"
+                f" VRAM       {vram_used} / {vram_total} MiB              \n"
+                f" UPTIME     {uptime:<25}\n"
+                f"                                     \n"
+                f" ◉ NETWORK     TAILSCALE / TCP       \n"
+                f" ◉ SSH         ONLINE                 \n"
+                f" ◉ SERVER      ONLINE                 \n"
+           
             )
 
         else:
