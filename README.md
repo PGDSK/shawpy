@@ -1,147 +1,110 @@
 # SHAWPY
 
-Personal system-status dashboard and mode switcher.  
-Works on **Linux**.
+A personal Linux-based engineering computing workspace and experimentation project — Python, networking, and system tooling, gradually growing alongside a civil and environmental engineering degree.
+
+This is a learning project, not a product. Some of it is solid working code; some is an early sketch. The sections below try to be honest about which is which.
+
+---
+
+## What's actually working right now
+
+### Status server + monitor (`04_network/`)
+
+A small TCP client/server pair for checking a machine's live system stats (CPU, RAM, disk, GPU via `nvidia-smi`) from another machine on the network.
+
+- `server.py` — runs on the machine you want to monitor. Threaded TCP server, line-based protocol.
+- `monitor.py` — polls a running server and renders a live ASCII dashboard.
+- `status.py` — one-shot local status print, no server needed.
+- `core/` — shared modules: `config.py` (config loading + env var overrides), `stats.py` (system metrics collection, uses `psutil` when available), `dashboard.py` (ASCII rendering).
+- `config.json` — server/monitor/display defaults.
+
+Protocol (plain text over TCP):
+
+| Client sends | Server replies |
+|---|---|
+| `STATUS` | ASCII dashboard, or JSON with `--json` |
+| `PING` | `PONG` |
+| `QUIT` | `goodbye` |
+
+```bash
+cd 04_network
+
+python server.py                     # on the machine to monitor
+python server.py --json -v           # JSON responses, verbose logging
+
+python monitor.py                    # on the watching machine
+python monitor.py --server 192.168.1.50 --refresh 1
+
+python status.py                     # one-shot, no networking involved
+```
+
+Defaults live in `04_network/config.json` and can be overridden with `SHAWPY_HOST`, `SHAWPY_PORT`, `SHAWPY_MONITOR_SERVER`, or CLI flags.
+
+### Mode scripts (`03_scripts/`)
+
+Bash scripts that switch power profile and KDE Activity for `gaming` / `chill` / `workstation` / `server` modes:
+
+```bash
+chmod +x 03_scripts/*.sh
+./03_scripts/gaming.sh
+```
+
+These are tied to one specific KDE/Nobara setup — they call `qdbus`, `kscreen-doctor`, and `powerprofilesctl` with hard-coded Activity UUIDs, so they won't do anything useful on a different machine without editing those UUIDs first. Kept as-is because they're genuine project history, not because they're portable.
+
+### Tools (`01_tools/`)
+
+- `calc.py` — a simple BMI calculator. Not an engineering tool, just an early scripting exercise kept for the record.
 
 ---
 
 ## Install
 
 ```bash
-# Python 3.10+ required
+# Python 3.10+
 pip install -r requirements.txt
 ```
 
-Optional but recommended: **NVIDIA drivers** so GPU stats appear via `nvidia-smi`.
+`psutil` is the only dependency, used for RAM/CPU/disk stats in `04_network`. Optional: NVIDIA drivers so GPU stats appear via `nvidia-smi`.
 
 ---
 
-## Status Server + Monitor
-
-### Start the server (machine to monitor)
-
-```bash
-python server.py
-# or on Windows: double-click run_server.bat
-```
-
-Options:
-
-| Flag | Description |
-|------|-------------|
-| `--host 0.0.0.0` | Bind address (default from config) |
-| `--port 8000` | Port |
-| `--json` | Return machine-readable JSON instead of ASCII |
-| `-v` | Verbose logging |
-
-### Start the monitor (any machine)
-
-Edit `config.json` → `monitor.server` (or pass flags):
-
-```bash
-python monitor.py
-python monitor.py --server 192.168.1.50 --refresh 1
-# or: run_monitor.bat
-```
-
-| Flag | Description |
-|------|-------------|
-| `-s / --server` | Host or IP of the status server |
-| `-p / --port` | Port |
-| `-r / --refresh` | Seconds between polls |
-| `-t / --timeout` | Connect timeout |
-
-### Config file (`config.json`)
-
-```json
-{
-  "server": { "host": "0.0.0.0", "port": 8000 },
-  "monitor": { "server": "100.124.10.41", "port": 8000, "refresh_seconds": 2 },
-  "display": { "title": "SHAWPY // STATUS", "width": 42 }
-}
-```
-
-Environment overrides: `SHAWPY_HOST`, `SHAWPY_PORT`, `SHAWPY_MONITOR_SERVER`.
-
-Firewall: allow **TCP 8000** inbound on the server machine if monitoring remotely.
-
----
-
-## Mode Scripts
-
-### Windows (PowerShell)
-
-```powershell
-# One-time
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-
-cd scripts\ 
-.\mode.ps1 gaming
-.\mode.ps1 chill
-.\mode.ps1 workstation
-.\mode.ps1 server      # keeps the PC awake
-```
-
-| Mode | Power plan | Brightness |
-|------|------------|------------|
-| `chill` | Power saver | 40% |
-| `gaming` | High performance | 100% |
-| `workstation` | Balanced | 80% |
-| `server` | Power saver + sleep inhibited | — |
-
-Brightness only works on supported laptop panels.
-
-### Linux (original KDE / Nobara scripts)
-
-```bash
-chmod +x scripts/linux/*.sh
-./scripts/linux/gaming.sh
-./scripts/linux/chill.sh
-# etc.
-```
-
-These use KDE Activities, `kscreen-doctor`, `powerprofilesctl`, and hard-coded activity UUIDs — they only work on the machine they were written for.
-
----
-
-## Project Layout
+## Repository layout
 
 ```
-shawpy-main/
-├── server.py              # Status TCP server
-├── monitor.py             # Live dashboard client
-├── config.json            # Defaults (edit me)
+shawpy/
+├── 01_tools/       # small standalone scripts (calc.py)
+├── 03_scripts/     # Linux mode-switching scripts (+ 03_scripts/linux/, currently a duplicate copy)
+├── 04_network/     # TCP status server, monitor, one-shot status, shared core/ modules
 ├── requirements.txt
-├── run_server.bat         # Windows convenience launchers
-├── run_monitor.bat
-├── core/
-│   ├── config.py          # Config loader + env overrides
-│   ├── stats.py           # Cross-platform system metrics
-│   └── dashboard.py       # ASCII box renderer
-├── scripts/
-│   ├── linux/             # Original KDE shell scripts
-│   └──  /           # PowerShell mode switcher
-└── tools/
-    └── calc.py            # BMI calculator
+└── README.md
 ```
+
+This is what actually exists today, not a target structure. New material gets added alongside it rather than by renaming or reshuffling what's here.
 
 ---
 
-## Protocol
+## Linux only
 
-Simple line-based TCP protocol on the configured port:
+Developed and tested on Linux. No Windows or macOS support is planned — no `.bat`/PowerShell launchers, no cross-platform abstractions added purely for portability.
 
-| Client sends | Server replies |
-|--------------|----------------|
-| `STATUS` | ASCII dashboard (or JSON with `--json`) |
-| `PING` | `PONG` |
-| `QUIT` | `goodbye` |
+---
+
+## Where this is heading
+
+SHAWPY is meant to grow alongside my degree rather than toward a fixed spec. Rough direction, not a commitment:
+
+- **Mathematics** — small experiments from multivariable calculus: surfaces, contour plots, eventually gradients.
+- **Engineering mechanics** — statics problems (beam reactions first, trusses later), checked against hand calculations.
+- **Engineering project appraisal** — NPV / benefit-cost ratio / payback calculations from JSON or CSV input.
+- **GIS / civil engineering** — terrain, slope, and spatial computing experiments, once there's a concrete reason to add them.
+- **Networking** — possibly extending the existing TCP protocol so the server can run these computations remotely, but only after each module already works well on its own.
+
+None of the above exists yet. This is a direction, not a feature list.
 
 ---
 
 ## Notes
 
-- `psutil` is required for accurate RAM, CPU %, disk, and uptime on Windows.
-- Without `psutil` the server still runs but many fields will be empty/zero.
-- Multi-GPU: first GPU reported by `nvidia-smi` is shown.
-- The server is multi-client (threaded) and handles graceful Ctrl+C shutdown.
+- This is a personal learning project and a record of how coursework concepts turn into working code — not production software.
+- `04_network/monitor.py.save` is a stray editor backup currently sitting in the repo; noting it here rather than silently removing it.
+- `03_scripts/` and `03_scripts/linux/` currently hold duplicate copies of the same scripts — noted, not yet cleaned up.
