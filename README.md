@@ -2,7 +2,7 @@
 
 A personal Linux-based engineering computing workspace and experimentation project — Python, networking, and system tooling, gradually growing alongside a civil and environmental engineering degree.
 
-This is a learning project, not a product. Some of it is solid working code; some is an early sketch. The sections below try to be honest about which is which.
+This is a learning project, not a product. Some of it is solid working code; some is an early sketch.
 
 ---
 
@@ -55,43 +55,10 @@ These are tied to one specific KDE/Nobara setup — they call `qdbus`, `kscreen-
 
 - `calc.py` — a simple BMI calculator. Not an engineering tool, just an early scripting exercise kept for the record.
 
----
+## Linux only:
+Built and tested on Nobara Linux (Fedora 44), with some code also being tested on Asahi Linux.
 
-## Install
-
-```bash
-# Python 3.10+
-pip install -r requirements.txt
-```
-
-`psutil` is the only dependency, used for RAM/CPU/disk stats in `04_network`. Optional: NVIDIA drivers so GPU stats appear via `nvidia-smi`.
-
----
-
-## Repository layout
-
-```
-shawpy/
-├── 01_tools/       # small standalone scripts (calc.py)
-├── 03_scripts/     # Linux mode-switching scripts (+ 03_scripts/linux/, currently a duplicate copy)
-├── 04_network/     # TCP status server, monitor, one-shot status, shared core/ modules
-├── requirements.txt
-└── README.md
-```
-
-This is what actually exists today, not a target structure. New material gets added alongside it rather than by renaming or reshuffling what's here.
-
----
-
-## Linux only
-
-Developed and tested on Linux. No Windows or macOS support is planned — no `.bat`/PowerShell launchers, no cross-platform abstractions added purely for portability.
-
----
-
-## Where this is heading
-
-SHAWPY is meant to grow alongside my degree rather than toward a fixed spec. Rough direction, not a commitment:
+## Future goals:
 
 - **Mathematics** — small experiments from multivariable calculus: surfaces, contour plots, eventually gradients.
 - **Engineering mechanics** — statics problems (beam reactions first, trusses later), checked against hand calculations.
@@ -99,12 +66,3 @@ SHAWPY is meant to grow alongside my degree rather than toward a fixed spec. Rou
 - **GIS / civil engineering** — terrain, slope, and spatial computing experiments, once there's a concrete reason to add them.
 - **Networking** — possibly extending the existing TCP protocol so the server can run these computations remotely, but only after each module already works well on its own.
 
-None of the above exists yet. This is a direction, not a feature list.
-
----
-
-## Notes
-
-- This is a personal learning project and a record of how coursework concepts turn into working code — not production software.
-- `04_network/monitor.py.save` is a stray editor backup currently sitting in the repo; noting it here rather than silently removing it.
-- `03_scripts/` and `03_scripts/linux/` currently hold duplicate copies of the same scripts — noted, not yet cleaned up.
