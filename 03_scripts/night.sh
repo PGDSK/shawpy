@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-PERCENT=${1:-33}
+PERCENT=${1:-77}
 
 # Clamp between 0 and 100
 PERCENT=$(( PERCENT < 0 ? 0 : PERCENT > 100 ? 100 : PERCENT ))
